@@ -47,6 +47,8 @@ class SSVAEConfig:
 
     # ssda variables ------------------------------------------------------------
     z_dim: int = 20
+    vae_loss_type:str = "vae_loss"
+    classifier_loss_type:str = "classifier_loss"
 
     # all configs ---------------------------------------------------------------
     encoder: EncoderConfig = EncoderConfig()

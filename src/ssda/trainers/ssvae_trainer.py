@@ -9,8 +9,7 @@ from ssda.data.dataloaders import NISTLoader
 
 from ssda.models.ssvae_model import SSVAE
 from ssda.configs.ssvae_config import SSVAEConfig
-from ssda.losses.contrastive_loss import vae_loss
-from ssda.losses.classifier_loss import classifier_loss_cross_entropy
+
 
 from ssda.models.encoder_config import EncoderConfig
 
@@ -30,19 +29,6 @@ class SSVAETrainer:
         self.device = torch.device(config.trainer.device)
         self.vae_loss_type = config.trainer.vae_loss_type
         self.classifier_loss_type = config.trainer.classifier_loss_type
-
-        #set other stuff
-        if self.vae_loss_type == "vae_loss":
-            self.vae_loss = vae_loss
-        else:
-            raise Exception("Loss Not Implemented")
-
-        #set other stuff
-        if self.classifier_loss_type == "classifier_loss":
-            self.classifier_loss = classifier_loss_cross_entropy
-        else:
-            raise Exception("Loss Not Implemented")
-
 
         #define models
         self.ssvae = SSVAE()
@@ -67,28 +53,23 @@ class SSVAETrainer:
     def preprocess_data(self,data_batch):
         return (data_batch[0].to(self.device), data_batch[1].to(self.device))
 
-    def loss(self):
-        return None
-
-    def train_step(self,data_batch,number_of_training_step):
+    def train_step(self,data_batch,number_of_training_step,data_type="label"):
         data_batch = self.preprocess_data(data_batch)
-        x,_ = data_batch
-        recon_x, mu, logvar = self.ssvae(x)
-        loss = self.loss(recon_x, x, mu, logvar)
+        forward_pass = self.ssvae(data_batch,data_type=data_type,inference=False)
+        loss_ = self.loss(forward_pass,data_type)
 
         self.optimizer.zero_grad()
-        loss.backward()
+        loss_.backward()
         self.optimizer.step()
 
-        self.writer.add_scalar('training loss', loss, number_of_training_step)
-        return loss
+        self.writer.add_scalar('{0}/training loss'.format(data_type), loss_, number_of_training_step)
+        return loss_
 
-    def test_step(self,data_batch):
+    def test_step(self,data_batch,data_type="label"):
         with torch.no_grad():
             data_batch = self.preprocess_data(data_batch)
-            x, _ = data_batch
-            recon_x, mu, logvar = self.ssvae(x)
-            loss_ = self.loss(recon_x, x, mu, logvar)
+            forward_pass = self.ssvae(data_batch,data_type=data_type,inference=True)
+            loss_ = self.loss(forward_pass, data_type)
             return loss_
 
     def initialize(self):
@@ -96,12 +77,23 @@ class SSVAETrainer:
         self.writer = SummaryWriter(self.config.experiment_files.tensorboard_path)
 
         self.optimizer = Adam(self.ssvae.parameters(), lr=self.learning_rate)
+
+        # TEST LABEL DATA
         data_batch = next(self.dataloader.train().__iter__())
         data_batch = self.preprocess_data(data_batch)
-        x,_ = data_batch
+
+        forward_ = self.ssvae(data_batch,data_type="label")
+        initial_loss = self.loss(forward_,data_batch,data_type="label")
+
+        assert torch.isnan(initial_loss).any() == False
+        assert torch.isinf(initial_loss).any() == False
+
+        # TEST UNLABEL DATA
+        data_batch = next(self.dataloader.train().__iter__())
         data_batch = self.preprocess_data(data_batch)
-        recon_x, mu, logvar = self.ssvae(x)
-        initial_loss = self.loss(recon_x, x, mu, logvar)
+
+        forward_ = self.ssvae(data_batch,data_type="unlabel")
+        initial_loss = self.loss(forward_,data_batch,data_type="unlabel")
 
         assert torch.isnan(initial_loss).any() == False
         assert torch.isinf(initial_loss).any() == False
@@ -126,18 +118,19 @@ class SSVAETrainer:
 
             LOSS = []
             train_loss = []
-            for data_batch in self.dataloader.train():
+            for data_batch in self.dataloader.train(data_type="unlabel"):
                 loss = self.train_step(data_batch,number_of_training_step)
                 train_loss.append(loss.item())
                 LOSS.append(loss.item())
                 number_of_training_step += 1
                 if number_of_training_step % 100 == 0:
                     print("number_of_training_step: {}, Loss: {}".format(number_of_training_step, loss.item()))
-
             average_train_loss = np.asarray(train_loss).mean()
 
+
+
             test_loss = []
-            for data_batch in self.dataloader.test():
+            for data_batch in self.dataloader.test(type="label"):
                 loss = self.test_step(data_batch)
                 test_loss.append(loss.item())
                 number_of_test_step+=1

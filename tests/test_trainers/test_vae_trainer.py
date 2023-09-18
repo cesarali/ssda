@@ -1,4 +1,3 @@
-
 import unittest
 from ssda.configs.vae_config import VAEConfig
 from ssda.trainers.vae_trainer import VAETrainer

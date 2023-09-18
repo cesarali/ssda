@@ -16,7 +16,7 @@ class TestNISTDataloader(unittest.TestCase):
                                 experiment_indentifier="vae_unittest",
                                 delete=True)
 
-        self.config.dataloader = NISTLoaderConfig(batch_size=128)
+        self.config.dataloader = NISTLoaderConfig(batch_size=14)
 
     def test_dataloader(self):
         dataloader = load_dataloader(self.config)
@@ -37,10 +37,13 @@ class TestSemisupervisedDataloader(unittest.TestCase):
                                   experiment_type='mnist',
                                   experiment_indentifier="ssvae_unittest")
 
-        self.config.dataloader = SemisupervisedLoaderConfig(batch_size=128)
-
+        self.config.dataloader = SemisupervisedLoaderConfig(batch_size=14)
         dataloader = load_dataloader(self.config)
-        databatch = next(dataloader.train(type="unlabeled").__iter__())
+
+        databatch = next(dataloader.train(data_type="unlabel").__iter__())
+        data,_ = databatch
+
+        databatch = next(dataloader.train(data_type="label").__iter__())
         data,_ = databatch
         print(data.shape)
 

@@ -29,4 +29,4 @@ def load_ssvae_experiments_configuration(experiment_name, experiment_type, exper
     ssvae_model = results["model"]
     dataloader = load_dataloader(config)
 
-    return ssvae_model.encoder,ssvae_model.decoder,ssvae_model.classifier,dataloader
+    return config,ssvae_model.encoder,ssvae_model.decoder,ssvae_model.classifier,dataloader

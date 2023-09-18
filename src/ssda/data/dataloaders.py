@@ -74,16 +74,14 @@ class SemisupervisedLoader:
                                                                                                  self.labeled_proportion,
                                                                                                  self.batch_size)
 
-    def train(self,type="label"):
-        if type == "label":
+    def train(self, data_type="label"):
+        if data_type == "label":
             return self.train_labeled_loader
         else:
             return self.train_unlabeled_loader
 
-    def test(self,type="label"):
-        if type == "label":
+    def test(self,data_type="label"):
+        if data_type == "label":
             return self.test_labeled_loader
         else:
             return self.test_unlabeled_loader
-
-
