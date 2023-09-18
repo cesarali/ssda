@@ -20,3 +20,13 @@ def load_experiments_configuration(experiment_name, experiment_type, experiment_
     dataloader = load_dataloader(config)
 
     return vae_model.encoder,vae_model.decoder,dataloader
+
+def load_ssvae_experiments_configuration(experiment_name, experiment_type, experiment_indentifier, checkpoint:int = None):
+    from ssda.data.dataloader_utils import load_dataloader
+
+    config: VAEConfig
+    config, results = load_experiments_results(experiment_name, experiment_type, experiment_indentifier, checkpoint)
+    ssvae_model = results["model"]
+    dataloader = load_dataloader(config)
+
+    return ssvae_model.encoder,ssvae_model.decoder,ssvae_model.classifier,dataloader

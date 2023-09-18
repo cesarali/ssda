@@ -4,7 +4,6 @@ import subprocess
 import setuptools
 
 name_of_repo = "ssda"
-#version = None
 
 def load_requirements():
     try:

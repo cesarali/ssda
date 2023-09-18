@@ -20,7 +20,7 @@ class Encoder(nn.Module):
 
     def encode(self, x):
         h1 = torch.relu(self.fc1(x))
-        return self.fc21(h1), self.dirfc22(h1)
+        return self.fc21(h1), self.fc22(h1)
 
     def reparameterize(self, mu, logvar):
         std = torch.exp(0.5 * logvar)
