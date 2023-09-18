@@ -48,7 +48,9 @@ class SSVAEConfig:
     # ssda variables ------------------------------------------------------------
     z_dim: int = 20
     vae_loss_type:str = "vae_loss"
+    vae_loss_lambda:float = 1.
     classifier_loss_type:str = "classifier_loss"
+    classifier_loss_lambda:float = 1.
 
     # all configs ---------------------------------------------------------------
     encoder: EncoderConfig = EncoderConfig()
@@ -101,7 +103,7 @@ class SSVAEConfig:
         with open(self.experiment_files.config_path, "w") as file:
             json.dump(config_as_dict, file)
 
-def get_config_from_file(experiment_name, experiment_type, experiment_indentifier) -> SSVAEConfig:
+def get_ssvae_config_from_file(experiment_name, experiment_type, experiment_indentifier) -> SSVAEConfig:
     from ssda import results_path
 
     experiment_dir = os.path.join(results_path, experiment_name)

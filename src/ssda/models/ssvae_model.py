@@ -1,6 +1,7 @@
 import os
 import sys
 from dataclasses import dataclass, asdict
+from typing import Union
 
 # torch stuff
 import torch
@@ -24,6 +25,12 @@ from ssda.losses.contrastive_loss import vae_loss
 from ssda.losses.classifier_loss import classifier_loss_cross_entropy
 
 EPSILON = 1e-12
+
+@dataclass
+class SSVAELoss:
+    reconstruction_loss:Union[float,torch.Tensor]
+    kl_loss:Union[float,torch.Tensor]
+    classifier_loss:Union[float,torch.Tensor]
 
 class SSVAE(nn.Module):
 
@@ -59,7 +66,7 @@ class SSVAE(nn.Module):
             vae_loss_ = self.vae_loss(recon_x, x , mu, logvar)
             classifier_loss_ = self.classifier_loss(logits, label)
 
-            loss_ = vae_loss_ + classifier_loss_
+            loss_ = self.config.vae_loss_lambda*vae_loss_ + self.config.classifier_loss_lambda*classifier_loss_
         else:
             x = databatch[0]
             recon_x, mu, logvar = forward_pass
@@ -118,18 +125,20 @@ class SSVAE(nn.Module):
         self.define_loss()
 
     def load_results_from_directory(self,
-                                    experiment_name='ssda',
+                                    experiment_name='ssvae',
                                     experiment_type='mnist',
                                     experiment_indentifier="test",
                                     checkpoint=None,
                                     device=torch.device("cpu")):
 
-        self.config, self.encoder,self.decoder, self.dataloader = load_ssvae_experiments_configuration(experiment_name,
-                                                                                                       experiment_type,
-                                                                                                       experiment_indentifier,
-                                                                                                       checkpoint)
+        self.config, self.encoder,self.decoder, self.classifier,self.dataloader = load_ssvae_experiments_configuration(experiment_name,
+                                                                                                                       experiment_type,
+                                                                                                                       experiment_indentifier,
+                                                                                                                       checkpoint)
         self.encoder.to(device)
         self.decoder.to(device)
+        self.classifier.to(device)
+
 
     def define_loss(self):
         #set other stuff

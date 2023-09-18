@@ -2,6 +2,7 @@ import unittest
 from ssda.configs.vae_config import VAEConfig
 from ssda.trainers.vae_trainer import VAETrainer
 
+
 class TestMITrainer(unittest.TestCase):
 
     read_config = VAEConfig
@@ -13,6 +14,7 @@ class TestMITrainer(unittest.TestCase):
 
         vae_trainer = VAETrainer(config)
         vae_trainer.train()
+
 
 if __name__=="__main__":
     unittest.main()
