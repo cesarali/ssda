@@ -28,6 +28,12 @@ class Encoder(nn.Module):
         return mu + eps * std
 
     def forward(self, x):
-        mu, logvar = self.encode(x.view(-1, 784))
+        if len(x.shape) == 4:
+            B,C,W,H = x.shape
+            D = C*W*H
+        elif len(x.shape) == 3:
+            B, W, H = x.shape
+            D = W*H
+        mu, logvar = self.encode(x.view(-1, D))
         z = self.reparameterize(mu, logvar)
         return z, mu, logvar

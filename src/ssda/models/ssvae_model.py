@@ -11,6 +11,7 @@ from torch import nn
 from ssda.data.dataloader_utils import load_dataloader
 from ssda.models.models_utils import load_encoder,load_decoder,load_classifier
 from ssda.trainers.trainers_utils import load_ssvae_experiments_configuration
+from ssda.losses.regression_loss import mse_loss_regression
 
 # configs
 from ssda.configs.ssvae_config import SSVAEConfig
@@ -59,10 +60,9 @@ class SSVAE(nn.Module):
     def loss(self,forward_pass,databatch,data_type="label"):
         if data_type == "label":
             x = databatch[0]
-            label =  databatch[1]
+            label = databatch[1]
 
             recon_x, mu, logvar, logits = forward_pass
-
             vae_loss_ = self.vae_loss(recon_x, x , mu, logvar)
             classifier_loss_ = self.classifier_loss(logits, label)
 
@@ -95,6 +95,8 @@ class SSVAE(nn.Module):
         super().to(device)
         self.encoder.to(device)
         self.decoder.to(device)
+        self.classifier.to(device)
+
 
     def generate(self, number_of_samples=64):
         # Generating samples from the trained VAE
@@ -150,5 +152,7 @@ class SSVAE(nn.Module):
         #set other stuff
         if self.config.classifier_loss_type == "classifier_loss":
             self.classifier_loss = classifier_loss_cross_entropy
+        elif self.config.classifier_loss_type == "mse":
+            self.classifier_loss = mse_loss_regression
         else:
             raise Exception("Loss Not Implemented")

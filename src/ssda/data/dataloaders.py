@@ -85,3 +85,4 @@ class SemisupervisedLoader:
             return self.test_labeled_loader
         else:
             return self.test_unlabeled_loader
+

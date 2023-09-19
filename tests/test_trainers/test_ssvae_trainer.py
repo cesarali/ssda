@@ -8,12 +8,11 @@ class TestMITrainer(unittest.TestCase):
 
     read_config = SSVAEConfig
 
-    @unittest.skip
     def test_trainer(self):
-        config = SSVAEConfig(experiment_indentifier="ssvae_trainer_classifier")
+        config = SSVAEConfig(experiment_indentifier="ssvae_trainer_unittest")
         config.trainer.device = "cuda:0"
 
-        config.trainer.number_of_epochs = 10
+        config.trainer.number_of_epochs = 1
         config.dataloader.labeled_proportion = 0.5
 
         config.vae_loss_lambda = 1.

@@ -12,6 +12,42 @@ class BasicDataSet(Dataset):
     def __getitem__(self, idx):
         return self.data[idx]
 
+
+class TransformsDictDataSet(Dataset):
+    """
+    # Define your data dictionary
+    data_dict = {'input': torch.randn(2, 10), 'target': torch.randn(2, 5)}
+
+    # Create your dataset
+    my_dataset = DictDataSet(data_dict)
+
+    # Create a DataLoader from your dataset
+    batch_size = 2
+    dataloader = DataLoader(my_dataset, batch_size=batch_size, shuffle=True)
+    """
+
+    def __init__(self, data_dict, transforms=None, key_of_transforms=None):
+        self.data_dict = data_dict
+        self.keys = list(data_dict.keys())
+        if transforms is not None:
+            self.transforms = transforms
+            self.key_of_transforms = key_of_transforms
+        print(self.keys)
+        print(self.key_of_transforms)
+
+    def __len__(self):
+        return len(self.data_dict[self.keys[0]])
+
+    def __getitem__(self, idx):
+        batch_dict = {}
+        for key in self.keys:
+            if key == self.key_of_transforms:
+                batch_dict[key] = self.transforms(self.data_dict[key][idx]).squeeze()
+            else:
+                batch_dict[key] = self.data_dict[key][idx]
+        return batch_dict
+
+
 class DictDataSet(Dataset):
     """
     # Define your data dictionary

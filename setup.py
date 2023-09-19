@@ -13,7 +13,6 @@ def load_requirements():
         print("WARNING: requirements.txt not found")
         return []
 
-
 try:
     with open("README.md", "r") as f:
         long_description = f.read()
