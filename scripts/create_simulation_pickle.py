@@ -2,10 +2,11 @@ import os
 import scipy
 from pathlib import Path
 from ssda.data.preprocess.porous import inpute_nans
-
+from ssda import data_path
 
 if __name__=="__main__":
-    data_path = Path("./data/")
+    data_path = Path(data_path)
+    data_path = data_path / "raw"
     mat_path = list(data_path.glob("*.mat"))[0]
     mat = scipy.io.loadmat(mat_path,squeeze_me=True, struct_as_record=False)
 
