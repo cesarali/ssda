@@ -35,6 +35,28 @@ class TestVAE(unittest.TestCase):
         reconstruction, mu, logvar = vae(data)
         print(reconstruction.shape)
 
+    def test_vae_porous(self):
+        from ssda.data.porous_dataloaders_config import PorousDataLoaderConfig
+        z_dim = 23
+        batch_size = 128
+        expected_size = torch.Size([batch_size,z_dim])
+
+        config = VAEConfig(experiment_indentifier="vae_porous_unittest",
+                           z_dim=z_dim)
+        config.dataloader = PorousDataLoaderConfig(batch_size=batch_size,
+                                                   type="simulations")
+        config.trainer.device = "cpu"
+        device = torch.device(config.trainer.device)
+
+        vae = VAE()
+        vae.create_new_from_config(config,device)
+
+        dataloader = load_dataloader(config)
+        databatch = next(dataloader.train().__iter__())
+        data = databatch["images"].float()
+
+        reconstruction, mu, logvar = vae(data)
+        print(reconstruction.shape)
 
 
 if __name__=="__main__":

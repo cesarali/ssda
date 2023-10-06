@@ -5,6 +5,8 @@ from ssda.data.dataloaders_config import SemisupervisedLoaderConfig
 
 from pathlib import Path
 from torchvision import datasets, transforms
+from ssda.data.preprocess.semisupervised import create_semi_supervised_dataloader
+
 
 def get_dataset(config:NISTLoaderConfig):
     # Load MNIST dataset
@@ -47,7 +49,6 @@ class NISTLoader:
     def test(self):
         return self.test_loader
 
-from ssda.data.preprocess.semisupervised import create_semi_supervised_dataloader
 
 class SemisupervisedLoader:
 

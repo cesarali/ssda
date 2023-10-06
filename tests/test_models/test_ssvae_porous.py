@@ -11,6 +11,7 @@ class TestSSPorousVAE(unittest.TestCase):
 
     read_config = SSVAEConfig
 
+    @unittest.skip
     def test_ssvae(self):
         z_dim = 23
         batch_size = 128

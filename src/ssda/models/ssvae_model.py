@@ -74,7 +74,7 @@ class SSVAE(nn.Module):
             loss_ = vae_loss_
         return loss_
 
-    def forward(self, databath, data_type="label", inference=True):
+    def forward(self, databath, data_type="label", training=True):
         if data_type == "label":
             image = databath[0]
             z, mu, logvar = self.encoder(image)
@@ -85,18 +85,17 @@ class SSVAE(nn.Module):
             z, mu, logvar = self.encoder(image)
             forward_ = self.decoder(z),mu,logvar
 
-        if inference:
-            return forward_
-        else:
+        if training:
             loss_ = self.loss(forward_,databath,data_type=data_type)
             return forward_,loss_
+        else:
+            return forward_
 
     def to(self,device):
         super().to(device)
         self.encoder.to(device)
         self.decoder.to(device)
         self.classifier.to(device)
-
 
     def generate(self, number_of_samples=64):
         # Generating samples from the trained VAE

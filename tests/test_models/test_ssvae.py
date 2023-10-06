@@ -42,11 +42,11 @@ class TestSSVAE(unittest.TestCase):
         # TRAINING
         #=====================================
         databatch = next(dataloader.train(data_type="label").__iter__())
-        (reconstruction, mu, logvar,logits),loss = ssvae(databatch,data_type="label",inference=False)
+        (reconstruction, mu, logvar,logits),loss = ssvae(databatch,data_type="label",training=True)
         print(f"Loss {reconstruction.shape} Mu {mu.shape} Logits {logits.shape}")
 
         databatch = next(dataloader.train(data_type="unlabel").__iter__())
-        (reconstruction, mu, logvar),loss = ssvae(databatch,data_type="unlabel",inference=False)
+        (reconstruction, mu, logvar),loss = ssvae(databatch,data_type="unlabel",training=True)
         print(f"Reconstruction {reconstruction.shape}")
 
 if __name__=="__main__":

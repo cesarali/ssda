@@ -12,15 +12,21 @@ class Encoder(nn.Module):
     def __init__(self,config:VAEConfig):
         super(Encoder, self).__init__()
         self.config = config
-
+        self.stochastic = self.config.encoder.stochastic
         self.fc1 = nn.Linear(self.config.dataloader.input_dim, self.config.encoder.encoder_hidden_size)
         self.fc21 = nn.Linear(self.config.encoder.encoder_hidden_size, self.config.z_dim)  # Mean
-        self.fc22 = nn.Linear(self.config.encoder.encoder_hidden_size, self.config.z_dim)  # Variance
+        if self.stochastic:
+            self.fc22 = nn.Linear(self.config.encoder.encoder_hidden_size, self.config.z_dim)  # Variance
 
 
     def encode(self, x):
         h1 = torch.relu(self.fc1(x))
-        return self.fc21(h1), self.fc22(h1)
+        mu = self.fc21(h1)
+        if self.stochastic:
+            logvar = self.fc22(h1)
+        else:
+            logvar = None
+        return mu,logvar
 
     def reparameterize(self, mu, logvar):
         std = torch.exp(0.5 * logvar)
@@ -35,5 +41,8 @@ class Encoder(nn.Module):
             B, W, H = x.shape
             D = W*H
         mu, logvar = self.encode(x.view(-1, D))
-        z = self.reparameterize(mu, logvar)
-        return z, mu, logvar
+        if self.stochastic:
+            z = self.reparameterize(mu, logvar)
+            return z, mu, logvar
+        else:
+            return mu,None,None

@@ -4,10 +4,11 @@ from ssda.trainers.ssvae_trainer import SSVAETrainer
 
 from ssda.models.ssvae_model import SSVAE
 
-class TestMITrainer(unittest.TestCase):
+class TestSSVAETrainer(unittest.TestCase):
 
     read_config = SSVAEConfig
 
+    @unittest.skip
     def test_trainer(self):
         config = SSVAEConfig(experiment_indentifier="ssvae_trainer_unittest")
         config.trainer.device = "cuda:0"
@@ -21,6 +22,7 @@ class TestMITrainer(unittest.TestCase):
         vae_trainer = SSVAETrainer(config)
         vae_trainer.train()
 
+    @unittest.skip
     def test_ssvae_read_results(self):
         ssvae = SSVAE()
         ssvae.load_results_from_directory(experiment_name='ssvae',

@@ -1,5 +1,7 @@
 import os
 from dataclasses import dataclass
+from dataclasses import field,fields
+from typing import List
 
 @dataclass
 class NISTLoaderConfig:
@@ -24,6 +26,7 @@ class NISTLoaderConfig:
 @dataclass
 class SemisupervisedLoaderConfig:
     name:str = "SemisupervisedLoader"
+
     data_set:str = "mnist"
     dataloader_data_dir:str = None
 
@@ -38,5 +41,3 @@ class SemisupervisedLoaderConfig:
         from ssda import data_path
         self.dataloader_data_dir = os.path.join(data_path,"raw")
         self.dataloader_data_dir_file = os.path.join(self.dataloader_data_dir,self.data_set+"_ss.tr")
-        if self.data_set == "mnist":
-            self.number_of_labels = 10

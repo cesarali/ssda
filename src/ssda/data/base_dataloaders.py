@@ -32,9 +32,9 @@ class TransformsDictDataSet(Dataset):
         if transforms is not None:
             self.transforms = transforms
             self.key_of_transforms = key_of_transforms
-        print(self.keys)
-        print(self.key_of_transforms)
-
+        else:
+            self.transforms = None
+            self.key_of_transforms = None
     def __len__(self):
         return len(self.data_dict[self.keys[0]])
 

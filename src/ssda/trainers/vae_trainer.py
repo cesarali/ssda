@@ -27,6 +27,7 @@ class VAETrainer:
         self.number_of_epochs = config.trainer.number_of_epochs
         self.device = torch.device(config.trainer.device)
         self.loss_type = config.trainer.loss_type
+        self.debug = config.trainer.debug
 
         #set other stuff
         if self.loss_type == "vae_loss":
@@ -120,6 +121,8 @@ class VAETrainer:
                 number_of_training_step += 1
                 if number_of_training_step % 100 == 0:
                     print("number_of_training_step: {}, Loss: {}".format(number_of_training_step, loss.item()))
+                if self.debug:
+                    break
 
             average_train_loss = np.asarray(train_loss).mean()
 
@@ -128,6 +131,8 @@ class VAETrainer:
                 loss = self.test_step(data_batch)
                 test_loss.append(loss.item())
                 number_of_test_step+=1
+                if self.debug:
+                    break
             average_test_loss = np.asarray(test_loss).mean()
 
             # SAVE RESULTS IF LOSS DECREASES IN VALIDATION

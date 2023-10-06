@@ -9,8 +9,6 @@ from ssda.data.dataloaders import NISTLoader
 
 from ssda.models.ssvae_model import SSVAE
 from ssda.configs.ssvae_config import SSVAEConfig
-
-
 from ssda.models.encoder_config import EncoderConfig
 
 class SSVAETrainer:
@@ -27,6 +25,7 @@ class SSVAETrainer:
         self.learning_rate = config.trainer.learning_rate
         self.number_of_epochs = config.trainer.number_of_epochs
         self.device = torch.device(config.trainer.device)
+        self.debug = config.trainer.debug
 
         #define models
         self.ssvae = SSVAE()
@@ -49,11 +48,14 @@ class SSVAETrainer:
         print("# ==================================================")
 
     def preprocess_data(self,data_batch):
-        return (data_batch[0].to(self.device), data_batch[1].to(self.device))
+        if len(data_batch) > 1:
+            return (data_batch[0].to(self.device), data_batch[1].to(self.device))
+        else:
+            return (data_batch[0].to(self.device))
 
     def train_step(self,data_batch,number_of_training_step,data_type="label"):
         data_batch = self.preprocess_data(data_batch)
-        forward_pass,loss_ = self.ssvae(data_batch,data_type=data_type,inference=False)
+        forward_pass,loss_ = self.ssvae(data_batch,data_type=data_type,training=True)
 
         self.optimizer.zero_grad()
         loss_.backward()
@@ -65,7 +67,7 @@ class SSVAETrainer:
     def test_step(self,data_batch,data_type="label"):
         with torch.no_grad():
             data_batch = self.preprocess_data(data_batch)
-            forward_pass,loss_ = self.ssvae(data_batch,data_type=data_type,inference=False)
+            forward_pass,loss_ = self.ssvae(data_batch,data_type=data_type,training=True)
             return loss_
 
     def initialize(self):
@@ -77,7 +79,7 @@ class SSVAETrainer:
         # TEST LABEL DATA
         data_batch = next(self.dataloader.train(data_type="label").__iter__())
         data_batch = self.preprocess_data(data_batch)
-        forward_,initial_loss_label = self.ssvae(data_batch,data_type="label",inference=False)
+        forward_,initial_loss_label = self.ssvae(data_batch,data_type="label",train=False)
 
         assert torch.isnan(initial_loss_label).any() == False
         assert torch.isinf(initial_loss_label).any() == False
@@ -85,7 +87,7 @@ class SSVAETrainer:
         # TEST UNLABEL DATA
         data_batch = next(self.dataloader.train(data_type="unlabel").__iter__())
         data_batch = self.preprocess_data(data_batch)
-        forward_,initial_loss_unlabel = self.ssvae(data_batch,data_type="unlabel",inference=False)
+        forward_,initial_loss_unlabel = self.ssvae(data_batch,data_type="unlabel",train=False)
 
         assert torch.isnan(initial_loss_unlabel).any() == False
         assert torch.isinf(initial_loss_unlabel).any() == False
@@ -120,6 +122,8 @@ class SSVAETrainer:
                 number_of_training_step_unlabel += 1
                 if number_of_training_step_unlabel % 100 == 0:
                     print("UNLABELED/number_of_training_step: {}, Loss: {}".format(number_of_training_step_unlabel, loss.item()))
+                if self.debug:
+                    break
             average_train_loss_unlabel = np.asarray(train_loss_unlabel).mean()
 
             #LABELED TRAINING----------------------------
@@ -139,6 +143,8 @@ class SSVAETrainer:
                 loss = self.test_step(data_batch)
                 test_loss_label.append(loss.item())
                 number_of_test_step+=1
+                if self.debug:
+                    break
             average_test_loss_label = np.asarray(test_loss_label).mean()
 
             # SAVE RESULTS IF LOSS DECREASES IN VALIDATION
@@ -161,7 +167,6 @@ class SSVAETrainer:
                                   LOSS=LOSS,
                                   epoch=epoch,
                                   checkpoint=True)
-
         self.writer.close()
 
     def save_results(self,

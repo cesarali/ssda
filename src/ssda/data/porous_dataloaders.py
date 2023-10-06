@@ -9,74 +9,112 @@ from torch.utils.data import TensorDataset,DataLoader,random_split
 from typing import Optional, Union, Tuple
 from torchvision import transforms
 
+from torch import nn
 from ssda import data_path
+from torchvision import transforms
 from ssda.data.base_dataloaders import TransformsDictDataSet
 from torch.utils.data import DataLoader, TensorDataset
+from ssda.data.transforms import UnsqueezeTensorTransform
+from ssda.data.porous_dataloaders_config import SemisupervisedLoaderPorousConfig
+from ssda.configs.ssvae_porous_config import SSPorousVAEConfig
+from dataclasses import dataclass
+from ssda.data.porous_dataloaders_config import PorousDataLoaderConfig
 
-class UnsqueezeTensorTransform:
 
-    def __init__(self,axis=0):
-        self.axis = axis
-    def __call__(self, tensor:torch.Tensor):
-        return tensor.unsqueeze(self.axis)
+def get_transforms(config:PorousDataLoaderConfig,type="patients")->Tuple[str,transforms.Compose]:
+    """
+    :param config:
+    :param type:
+    :return:
+    """
+    if type == "patients":
+        transforms_ = transforms.Compose([
+            UnsqueezeTensorTransform(),
+            #transforms.Normalize(mean=[patient_metadata["rescaling"][0]], std=[patient_metadata["rescaling"][0]]),
+            transforms.Resize((11, 24))
+        ])
+        key_of_transforms = "y_diff"
+        return key_of_transforms,transforms_
+    elif type == "simulations":
 
-class PorousDataLoaderDict(ABC):
+        transforms_ = transforms.Compose([
+            UnsqueezeTensorTransform(),
+            #transforms.Normalize(mean=[simulations_metadata["rescaling"][0]],std=[simulations_metadata["rescaling"][0]]),
+            transforms.Resize((11, 24))
+        ])
+        key_of_transforms = "nds"
+        return key_of_transforms,transforms_
+
+def get_datasets(config:PorousDataLoaderConfig,type="patients"):
+    """
+    :param config:
+    :param type:
+    :return:
+    """
+    from ssda import data_path
+
+    if type == "patients":
+        from ssda.data.preprocess.real import obtain_all_results
+        real_filtered_path = os.path.join(data_path, "preprocessed", "filtered_real_images.pkl")
+        final_reduced_real_image = pickle.load(open(real_filtered_path, "rb"))
+
+        #all_result_parent_folder = "D:/Projects/Clinical_Studies/CortBS_DEGUM_2022/06_Results/"
+        #full_data = obtain_all_results(all_result_parent_folder)
+
+        #real_dz = mat_result.dz
+        #real_frequencies = mat_result.f_sampling
+        #real_image = mat_result.Ydiff
+
+        dataset_dict = {"images": [image for k, image in final_reduced_real_image.items()]}
+        return dataset_dict
+
+    elif type == "simulations":
+
+        simulation_filtered_path = os.path.join(data_path, "preprocessed", "filtered_simulation_images.pkl")
+        final_reduced_simulation_image = pickle.load(open(simulation_filtered_path, "rb"))
+
+        raw_path = os.path.join(data_path, "raw")
+        data_path = Path(raw_path)
+        mat_path = list(data_path.glob("*.mat"))[0]
+        mat = scipy.io.loadmat(mat_path, squeeze_me=True, struct_as_record=False)
+
+        dataset_dict = {}
+        dataset_dict["images"] = [image for k,image in final_reduced_simulation_image.items()]
+        for target_string in config.target_for_simulation:
+            dataset_dict[target_string] = mat[target_string]
+
+        image_example = dataset_dict["images"][0]
+        config.input_dim = image_example.shape[0]* image_example.shape[1]
+
+        return dataset_dict
+
+
+class PorousDataLoaderDict:
+
     name_ = "porous_data_loader"
 
     def __init__(self,
-                 X: Union[torch.Tensor, dict] = None,
-                 type="client",
-                 batch_size: int = 32,
-                 training_proportion: float = 0.9,
-                 device: torch.device = torch.device("cpu"),
-                 rank: int = 0,
-                 in_house=False,
-                 **kwargs):
+                 config:PorousDataLoaderConfig,
+                 type=None):
         super(PorousDataLoaderDict, self).__init__()
-        self.training_proportion = training_proportion
-        self.batch_size = batch_size
+        self.training_proportion = config.training_proportion
+        self.batch_size = config.batch_size
+        if type is None:
+            self.type = config.type
+        else:
+            self.type = type
+        dict_datasets = get_datasets(config,self.type)
+        #self.key_of_transforms, self.transforms_ = get_transforms(config,type)
+        self.key_of_transforms, self.transforms_ = None,None
+        self.define_dataset_and_dataloaders(dict_datasets)
+        self.config = config
 
-        if type == "client":
-            patient_dir = os.path.join(data_path, "raw", "porous", "patient")
-            patient_metadata_path = os.path.join(patient_dir, "client_metadata.cp")
 
-            with open(patient_metadata_path, "rb") as file:
-                patient_metadata = pickle.load(file)
-
-            self.transforms = transforms.Compose([
-                UnsqueezeTensorTransform(),
-                transforms.Normalize(mean=[patient_metadata["rescaling"][0]], std=[patient_metadata["rescaling"][0]]),
-                transforms.Resize((11, 24))
-            ])
-            self.key_of_transforms = "y_diff"
-
-        elif type == "simulations":
-            simulations_dir = os.path.join(data_path, "raw", "porous", "simulation")
-            simulations_metadata_path = os.path.join(simulations_dir, "simulations_metadata.cp")
-
-            with open(simulations_metadata_path, "rb") as file:
-                simulations_metadata = pickle.load(file)
-
-            self.transforms = transforms.Compose([
-                UnsqueezeTensorTransform(),
-                transforms.Normalize(mean=[simulations_metadata["rescaling"][0]],
-                                     std=[simulations_metadata["rescaling"][0]]),
-                transforms.Resize((11, 24))
-            ])
-            self.key_of_transforms = "nds"
-
-        self.define_dataset_and_dataloaders(X)
-
-    def define_dataset_and_dataloaders(self, X, training_proportion=None, batch_size=None):
-        if training_proportion is not None:
-            self.training_proportion = training_proportion
-        if batch_size is not None:
-            self.batch_size = batch_size
-
-        if isinstance(X, torch.Tensor):
-            dataset = TensorDataset(X)
-        elif isinstance(X, dict):
-            dataset = TransformsDictDataSet(X, self.transforms, self.key_of_transforms)
+    def define_dataset_and_dataloaders(self, dict_datasets):
+        if isinstance(dict_datasets, torch.Tensor):
+            dataset = TensorDataset(dict_datasets)
+        elif isinstance(dict_datasets, dict):
+            dataset = TransformsDictDataSet(dict_datasets, self.transforms_, self.key_of_transforms)
 
         self.total_data_size = len(dataset)
         self.training_data_size = int(self.training_proportion * self.total_data_size)
@@ -91,47 +129,6 @@ class PorousDataLoaderDict(ABC):
 
     def test(self):
         return self._test_iter
-
-
-from ssda.data.porous_dataloaders_config import SemisupervisedLoaderPorousConfig
-
-def standardize_tensor(tensor):
-    tensor_mean = torch.mean(tensor)
-    tensor_std = torch.std(tensor)
-    standardized_tensor = (tensor - tensor_mean) / tensor_std
-    return standardized_tensor
-
-def normalize_tensor(tensor):
-    tensor_min = torch.min(tensor)
-    tensor_max = torch.max(tensor)
-    normalized_tensor = (tensor - tensor_min) / (tensor_max - tensor_min)
-    return normalized_tensor
-
-
-def get_simulations(config:SemisupervisedLoaderPorousConfig):
-    from ssda.data.preprocess.porous import pick_data
-    from ssda.data.preprocess.porous import inpute_data_cut
-    from ssda import data_path as data_dir
-
-    data_dir = os.path.join(data_dir, "raw", "porous")
-    data_path = os.path.join(data_dir,"Charite_CortBS_Simulations.mat")
-    mat = scipy.io.loadmat(data_path)
-
-    X_,Y = pick_data(mat,target_name=config.target_name)
-    X_ = X_.transpose(2,0,1)
-    X_reduced = torch.Tensor(inpute_data_cut(X_,cut_size_x=config.cut_size_x,cut_size_y = config.cut_size_y))
-    Y = torch.Tensor(Y)
-    config.input_dim = X_reduced.shape[1]*X_reduced.shape[2]
-
-    X_reduced = normalize_tensor(X_reduced)
-    Y = normalize_tensor(Y)
-
-    assert not torch.isnan(torch.Tensor(X_reduced)).any()
-
-    mydataset = TensorDataset(X_reduced, Y)
-
-    return mydataset
-
 
 class SemisupervisedPorousLoader:
 
@@ -148,20 +145,7 @@ class SemisupervisedPorousLoader:
         self.dataloader_data_dir_path = Path(self.dataloader_data_dir)
         self.dataloader_data_dir_file_path = Path(config.dataloader_data_dir_file)
 
-        label_dataset = get_simulations(self.config)
-        unlabel_dataset = get_simulations(self.config)
-
-        self.total_data_size = len(label_dataset)
-        self.training_data_size = int(self.training_proportion * self.total_data_size)
-        self.test_data_size = self.total_data_size - self.training_data_size
-        train_label_dataset, test_label_dataset = random_split(label_dataset, [self.training_data_size, self.test_data_size])
-
-        self.train_labeled_loader = DataLoader(train_label_dataset, batch_size=self.batch_size)
-        self.test_labeled_loader = DataLoader(test_label_dataset, batch_size=self.batch_size)
-        self.train_unlabeled_loader = DataLoader(unlabel_dataset, batch_size=self.batch_size)
-
-
-    def train(self, data_type="label"):
+    def train(self,data_type="label"):
         if data_type == "label":
             return self.train_labeled_loader
         else:
@@ -175,11 +159,16 @@ class SemisupervisedPorousLoader:
 
 
 if __name__=="__main__":
+    from pprint import pprint
+    from dataclasses import asdict
 
-    dataset = get_simulations()
+    config = SSPorousVAEConfig()
+    config.dataloader.batch_size = 2
 
-    train_dataloader = DataLoader(dataset,batch_size=23)
-    databatch = next(train_dataloader.__iter__())
+    dataloader = PorousDataLoaderDict(config,"patients")
+    databatch = next(dataloader.train().__iter__())
+    print(databatch)
 
-    print(databatch[0].shape)
-    print(databatch[1].shape)
+    dataloader = PorousDataLoaderDict(config,"simulations")
+    databatch = next(dataloader.train().__iter__())
+    print(databatch)

@@ -16,18 +16,6 @@ all_trainers_configs = {"VAETrainer":VAETrainerConfig}
 
 
 @dataclass
-class VAE_ExperimentsFiles(ExperimentFiles):
-    best_model_path_checkpoint:str = None
-    best_model_path:str = None
-    plot_path:str = None
-
-    def __post_init__(self):
-        super().__post_init__()
-        self.best_model_path_checkpoint = os.path.join(self.results_dir, "model_checkpoint_{0}.tr")
-        self.best_model_path = os.path.join(self.results_dir, "best_model.tr")
-        self.plot_path = os.path.join(self.results_dir, "plot.png")
-
-@dataclass
 class VAEConfig:
 
     config_path : str = ""
@@ -48,13 +36,16 @@ class VAEConfig:
 
     dataloader: NISTLoaderConfig = NISTLoaderConfig()
     trainer: VAETrainerConfig = VAETrainerConfig()
-    experiment_files:VAE_ExperimentsFiles = None
+    experiment_files:ExperimentFiles = None
 
     def __post_init__(self):
-        self.experiment_files = VAE_ExperimentsFiles(delete=self.delete,
-                                                     experiment_name=self.experiment_name,
-                                                     experiment_indentifier=self.experiment_indentifier,
-                                                     experiment_type=self.experiment_type)
+        if isinstance(self.experiment_files,dict):
+            self.experiment_files = ExperimentFiles(delete=False,experiment_dir=self.experiment_files["experiment_dir"])
+        else:
+            self.experiment_files = ExperimentFiles(delete=self.delete,
+                                                    experiment_name=self.experiment_name,
+                                                    experiment_type=self.experiment_type,
+                                                    experiment_indentifier=self.experiment_indentifier)
 
         if isinstance(self.encoder, dict):
             self.encoder = all_encoders_configs[self.encoder["name"]](**self.encoder)
