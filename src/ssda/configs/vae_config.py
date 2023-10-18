@@ -8,8 +8,9 @@ from ssda.models.encoder_config import EncoderConfig
 from ssda.models.decoder_config import DecoderConfig
 from ssda.trainers.vae_trainer_config import VAETrainerConfig
 from ssda.data.dataloaders_config import NISTLoaderConfig
+from ssda.data.porous_dataloaders_config import PorousDataLoaderConfig
 
-all_dataloaders_configs = {"NISTLoader":NISTLoaderConfig}
+all_dataloaders_configs = {"NISTLoader":NISTLoaderConfig,"PorousDataLoader":PorousDataLoaderConfig}
 all_encoders_configs = {"Encoder":EncoderConfig}
 all_decoders_configs = {"Decoder":DecoderConfig}
 all_trainers_configs = {"VAETrainer":VAETrainerConfig}
@@ -22,7 +23,7 @@ class VAEConfig:
 
     # files, directories and naming ---------------------------------------------
     delete :bool = True
-    experiment_name :str = 'ssda'
+    experiment_name :str = 'vae'
     experiment_type :str = 'mnist'
     experiment_indentifier :str  = None
     init_model_path = None
@@ -40,7 +41,7 @@ class VAEConfig:
 
     def __post_init__(self):
         if isinstance(self.experiment_files,dict):
-            self.experiment_files = ExperimentFiles(delete=False,experiment_dir=self.experiment_files["experiment_dir"])
+            self.experiment_files = ExperimentFiles(**self.experiment_files)
         else:
             self.experiment_files = ExperimentFiles(delete=self.delete,
                                                     experiment_name=self.experiment_name,

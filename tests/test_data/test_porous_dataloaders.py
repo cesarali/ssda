@@ -20,6 +20,7 @@ class TestPorousDict(unittest.TestCase):
         dataloader = PorousDataLoaderDict(config, "simulations")
         databatch = next(dataloader.train().__iter__())
         print(databatch)
+        print(isinstance(databatch,dict))
 
 @unittest.skip
 class TestPorousLoader(unittest.TestCase):

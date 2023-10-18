@@ -66,6 +66,9 @@ def get_datasets(config:PorousDataLoaderConfig,type="patients"):
         #real_image = mat_result.Ydiff
 
         dataset_dict = {"images": [image for k, image in final_reduced_real_image.items()]}
+        image_example = dataset_dict["images"][0]
+        config.input_dim = image_example.shape[0]* image_example.shape[1]
+
         return dataset_dict
 
     elif type == "simulations":

@@ -6,7 +6,7 @@ from pprint import pprint
 from dataclasses import asdict
 
 from ssda.data.dataloaders import NISTLoader
-
+from tqdm import tqdm
 from ssda.models.vae_model import VAE
 from ssda.configs.vae_config import VAEConfig
 from ssda.losses.contrastive_loss import vae_loss
@@ -56,12 +56,17 @@ class VAETrainer:
         print("# ==================================================")
 
     def preprocess_data(self,data_batch):
-        return (data_batch[0].to(self.device), data_batch[1].to(self.device))
+        if isinstance(data_batch,dict):
+            return {"images":data_batch["images"].to(self.device).float()}
+        else:
+            return (data_batch[0].to(self.device),)
 
     def train_step(self,data_batch,number_of_training_step):
-
         data_batch = self.preprocess_data(data_batch)
-        x,_ = data_batch
+        if isinstance(data_batch,dict):
+            x = data_batch["images"]
+        else:
+            x = data_batch[0]
         recon_x, mu, logvar = self.vae(x)
         loss = self.loss(recon_x, x, mu, logvar)
 
@@ -75,7 +80,12 @@ class VAETrainer:
     def test_step(self,data_batch):
         with torch.no_grad():
             data_batch = self.preprocess_data(data_batch)
-            x, _ = data_batch
+
+            if isinstance(data_batch, dict):
+                x = data_batch["images"]
+            else:
+                x = data_batch[0]
+
             recon_x, mu, logvar = self.vae(x)
             loss_ = self.loss(recon_x, x, mu, logvar)
             return loss_
@@ -87,7 +97,11 @@ class VAETrainer:
         self.optimizer = Adam(self.vae.parameters(),lr=self.learning_rate)
         data_batch = next(self.dataloader.train().__iter__())
         data_batch = self.preprocess_data(data_batch)
-        x,_ = data_batch
+        if isinstance(data_batch,dict):
+            x = data_batch["images"]
+        else:
+            x = data_batch[0]
+
         recon_x, mu, logvar = self.vae(x)
         initial_loss = self.loss(recon_x, x, mu, logvar)
 
@@ -110,7 +124,7 @@ class VAETrainer:
 
         number_of_training_step = 0
         number_of_test_step = 0
-        for epoch in range(self.number_of_epochs):
+        for epoch in tqdm(range(self.number_of_epochs)):
 
             LOSS = []
             train_loss = []
